@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tem 35x22</title>
+
+  <!-- Thư viện vẽ barcode (miễn phí) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <!-- Thư viện vẽ QR code (miễn phí) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <style>
+    /* ===== CẤU HÌNH TRANG IN ===== */
+    @page {
+      size: 70mm 22mm;   /* Tem đôi: 2 tem 35mm cạnh nhau */
+      margin: 0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Container chứa 2 tem cạnh nhau */
+    .sheet {
+      display: flex;
+      width: 70mm;
+      height: 22mm;
+      background: white;
+    }
+
+    /* Mỗi tem 35x22mm */
+    .label {
+      width: 35mm;
+      height: 22mm;
+      border: 0.3mm solid #ccc;   /* chỉ để xem trước, in sẽ ẩn */
+      padding: 1.2mm 1.5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Khi in thì bỏ border */
+    @media print {
+      body { background: white; }
+      .label { border: none; }
+      .no-print { display: none !important; }
+    }
+
+    /* Dòng chữ trên cùng */
+    .top-text {
+      font-size: 5.5pt;
+      font-weight: bold;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.3px;
+    }
+
+    /* Phần giữa: QR + Barcode */
+    .middle {
+      display: flex;
+      align-items: center;
+      gap: 1.5mm;
+      flex: 1;
+    }
+
+    /* QR code */
+    #qrcode {
+      width: 11mm;
+      height: 11mm;
+    }
+
+    /* Phần barcode + số */
+    .barcode-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #barcode {
+      width: 100%;
+      max-height: 8mm;
+    }
+
+    .barcode-number {
+      font-size: 6pt;
+      font-weight: 600;
+      margin-top: 0.3mm;
+      letter-spacing: 0.5px;
+    }
+
+    /* Dòng chữ dưới cùng */
+    .bottom-text {
+      font-size: 9pt;
+      font-weight: 900;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* Nút in (chỉ hiện trên màn hình) */
+    .print-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 28px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== TEM ĐÔI ===== -->
+  <div class="sheet">
+    <!-- TEM 1 -->
+    <div class="label" id="label1">
+      <div class="top-text" id="top1">PHU TUNG THIENTHAOCHBL</div>
+      
+      <div class="middle">
+        <canvas id="qr1"></canvas>
+        <div class="barcode-area">
+          <svg id="barcode1"></svg>
+          <div class="barcode-number" id="num1">6431801584773</div>
+        </div>
+      </div>
+      
+      <div class="bottom-text" id="bottom1">CẢNG RS</div>
+    </div>
+
+    <!-- TEM 2 (có thể để trống hoặc dùng dữ liệu khác) -->
+    <div class="label" id="label2">
+      <div class="top-text" id="top2">PHU TUNG THIENTHAOCHBL</div>
+      
+      <div class="middle">
+        <canvas id="qr2"></canvas>
+        <div class="barcode-area">
+          <svg id="barcode2"></svg>
+          <div class="barcode-number" id="num2">6431801584773</div>
+        </div>
+      </div>
+      
+      <div class="bottom-text" id="bottom2">CẢNG RS</div>
+    </div>
+  </div>
+
+  <!-- Nút in (chỉ hiện khi xem trên điện thoại/máy tính) -->
+  <button class="print-btn no-print" onclick="window.print()">In tem ngay</button>
+
+  <script>
+    // ===== LẤY DỮ LIỆU TỪ URL =====
+    const params = new URLSearchParams(window.location.search);
+
+    // Dữ liệu mặc định (nếu không có tham số)
+    const data = {
+      top:    params.get('top')    || 'PHU TUNG THIENTHAOCHBL',
+      barcode:params.get('barcode')|| '6431801584773',
+      qr:     params.get('qr')     || params.get('barcode') || '6431801584773',
+      bottom: params.get('bottom') || 'CẢNG RS',
+
+      // Nếu muốn 2 tem khác nhau
+      top2:    params.get('top2')    || params.get('top')    || 'PHU TUNG THIENTHAOCHBL',
+      barcode2:params.get('barcode2')|| params.get('barcode')|| '6431801584773',
+      qr2:     params.get('qr2')     || params.get('qr')     || params.get('barcode') || '6431801584773',
+      bottom2: params.get('bottom2') || params.get('bottom') || 'CẢNG RS'
+    };
+
+    // ===== VẼ TEM 1 =====
+    document.getElementById('top1').textContent = data.top;
+    document.getElementById('num1').textContent = data.barcode;
+    document.getElementById('bottom1').textContent = data.bottom;
+
+    // Vẽ barcode
+    JsBarcode("#barcode1", data.barcode, {
+      format: "CODE128",
+      width: 1.1,
+      height: 28,
+      displayValue: false,
+      margin: 0
+    });
+
+    // Vẽ QR
+    QRCode.toCanvas(document.getElementById('qr1'), data.qr, {
+      width: 42,
+      margin: 0,
+      errorCorrectionLevel: 'M'
+    });
+
+    // ===== VẼ TEM 2 =====
+    document.getElementById('top2').textContent = data.top2;
+    document.getElementById('num2').textContent = data.barcode2;
+    document.getElementById('bottom2').textContent = data.bottom2;
+
+    JsBarcode("#barcode2", data.barcode2, {
+      format: "CODE128",
+      width: 1.1,
+      height: 28,
+      displayValue: false,
+      margin: 0
+    });
+
+    QRCode.toCanvas(document.getElementById('qr2'), data.qr2, {
+      width: 42,
+      margin: 0,
+      errorCorrectionLevel: 'M'
+    });
+
+    // Tự động in sau 0.6 giây (có thể bỏ nếu muốn bấm nút)
+    // setTimeout(() => window.print(), 600);
+  </script>
+</body>
+</html>
