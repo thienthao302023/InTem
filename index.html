@@ -6,7 +6,7 @@
   <title>Tem 35x22</title>
   <style>
     @page {
-      size: 70mm 22mm;
+      size: 35mm 22mm;
       margin: 0;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,12 +18,6 @@
       align-items: center;
       min-height: 100vh;
     }
-    .sheet {
-      display: flex;
-      width: 70mm;
-      height: 22mm;
-      background: white;
-    }
     .label {
       width: 35mm;
       height: 22mm;
@@ -33,6 +27,7 @@
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
+      background: white;
     }
     @media print {
       body { background: white; }
@@ -87,42 +82,27 @@
 </head>
 <body>
 
-  <div class="sheet">
-    <!-- TEM 1 -->
-    <div class="label">
-      <div class="top-text" id="top1">PHU TUNG THIENTHAOCHBL</div>
-      <div class="middle">
-        <canvas id="qr1" width="42" height="42"></canvas>
-        <div class="barcode-area">
-          <svg id="barcode1"></svg>
-          <div class="barcode-number" id="num1">---</div>
-        </div>
+  <!-- CHỈ 1 TEM -->
+  <div class="label">
+    <div class="top-text" id="top">PHU TUNG THIENTHAOCHBL</div>
+    
+    <div class="middle">
+      <canvas id="qr" width="42" height="42"></canvas>
+      <div class="barcode-area">
+        <svg id="barcode"></svg>
+        <div class="barcode-number" id="num">---</div>
       </div>
-      <div class="bottom-text" id="bottom1">---</div>
     </div>
-
-    <!-- TEM 2 -->
-    <div class="label">
-      <div class="top-text" id="top2">PHU TUNG THIENTHAOCHBL</div>
-      <div class="middle">
-        <canvas id="qr2" width="42" height="42"></canvas>
-        <div class="barcode-area">
-          <svg id="barcode2"></svg>
-          <div class="barcode-number" id="num2">---</div>
-        </div>
-      </div>
-      <div class="bottom-text" id="bottom2">---</div>
-    </div>
+    
+    <div class="bottom-text" id="bottom">---</div>
   </div>
 
   <button class="print-btn no-print" onclick="window.print()">In tem ngay</button>
 
-  <!-- Load thư viện trước -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
   <script>
-    // Chờ thư viện load xong rồi mới chạy
     function veTem() {
       const params = new URLSearchParams(window.location.search);
 
@@ -131,12 +111,11 @@
       const qr      = params.get('qr')      || barcode;
       const bottom  = params.get('bottom')  || '---';
 
-      // Tem 1
-      document.getElementById('top1').textContent = top;
-      document.getElementById('num1').textContent = barcode;
-      document.getElementById('bottom1').textContent = bottom;
+      document.getElementById('top').textContent = top;
+      document.getElementById('num').textContent = barcode;
+      document.getElementById('bottom').textContent = bottom;
 
-      JsBarcode("#barcode1", barcode, {
+      JsBarcode("#barcode", barcode, {
         format: "CODE128",
         width: 1.1,
         height: 28,
@@ -144,33 +123,13 @@
         margin: 0
       });
 
-      QRCode.toCanvas(document.getElementById('qr1'), qr, {
-        width: 42,
-        margin: 0,
-        errorCorrectionLevel: 'M'
-      });
-
-      // Tem 2 (giống tem 1)
-      document.getElementById('top2').textContent = top;
-      document.getElementById('num2').textContent = barcode;
-      document.getElementById('bottom2').textContent = bottom;
-
-      JsBarcode("#barcode2", barcode, {
-        format: "CODE128",
-        width: 1.1,
-        height: 28,
-        displayValue: false,
-        margin: 0
-      });
-
-      QRCode.toCanvas(document.getElementById('qr2'), qr, {
+      QRCode.toCanvas(document.getElementById('qr'), qr, {
         width: 42,
         margin: 0,
         errorCorrectionLevel: 'M'
       });
     }
 
-    // Đảm bảo thư viện đã sẵn sàng
     if (typeof JsBarcode !== 'undefined' && typeof QRCode !== 'undefined') {
       veTem();
     } else {
