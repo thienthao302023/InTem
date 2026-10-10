@@ -5,18 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tem 35x22</title>
   <style>
-    @page {
-      size: 35mm 22mm;
-      margin: 0;
-    }
+    @page { size: 35mm 22mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: Arial, Helvetica, sans-serif;
       background: #f0f0f0;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      gap: 20px;
     }
     .label {
       width: 35mm;
@@ -27,10 +26,12 @@
       justify-content: space-between;
       background: white;
       overflow: hidden;
+      border: 0.3mm solid #ccc;
     }
     @media print {
       body { background: white; }
       .no-print { display: none !important; }
+      .label { border: none; }
     }
     .top-text {
       font-size: 5pt;
@@ -59,10 +60,7 @@
       justify-content: center;
       min-width: 0;
     }
-    #barcode {
-      width: 100%;
-      max-height: 7.5mm;
-    }
+    #barcode { width: 100%; max-height: 7.5mm; }
     .barcode-number {
       font-size: 5.5pt;
       font-weight: 600;
@@ -71,7 +69,7 @@
       white-space: nowrap;
     }
     .bottom-text {
-      font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+      font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
       font-size: 8.5pt;
       font-weight: 700;
       text-align: center;
@@ -79,26 +77,28 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .print-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 28px;
-      background: #2563eb;
+    .button-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 18px;
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
       cursor: pointer;
     }
+    #sharePdfBtn { background: #e91e63; }
+    #printBtn { background: #2563eb; }
   </style>
 </head>
 <body>
 
-  <div class="label">
+  <div class="label" id="labelContent">
     <div class="top-text" id="top">PHU TUNG THIENTHAOCHBL</div>
-    
     <div class="middle">
       <div id="qrcode"></div>
       <div class="barcode-area">
@@ -106,20 +106,22 @@
         <div class="barcode-number" id="num">---</div>
       </div>
     </div>
-    
     <div class="bottom-text" id="bottom">---</div>
   </div>
 
-  <button class="print-btn no-print" onclick="window.print()">In tem ngay</button>
+  <div class="button-container no-print">
+    <button id="sharePdfBtn">Chia sẻ PDF</button>
+    <button id="printBtn" onclick="window.print()">In tem ngay</button>
+  </div>
 
-  <!-- Thư viện ổn định -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     function veTem() {
       const params = new URLSearchParams(window.location.search);
-
       const top     = params.get('top')     || 'PHU TUNG THIENTHAOCHBL';
       const barcode = params.get('barcode') || '0000000000000';
       const qr      = params.get('qr')      || barcode;
@@ -129,7 +131,6 @@
       document.getElementById('num').textContent = barcode;
       document.getElementById('bottom').textContent = bottom;
 
-      // Vẽ barcode
       JsBarcode("#barcode", barcode, {
         format: "CODE128",
         width: 0.9,
@@ -138,7 +139,6 @@
         margin: 0
       });
 
-      // Vẽ QR (thư viện qrcodejs)
       document.getElementById('qrcode').innerHTML = '';
       new QRCode(document.getElementById('qrcode'), {
         text: qr,
@@ -150,10 +150,39 @@
       });
     }
 
-    // Đợi thư viện load
-    window.addEventListener('load', function() {
-      setTimeout(veTem, 100);
-    });
+    window.addEventListener('load', () => setTimeout(veTem, 150));
+
+    // ===== CHIA SẺ PDF =====
+    async function sharePdf() {
+      try {
+        const canvas = await html2canvas(document.getElementById("labelContent"), {
+          scale: 4,
+          backgroundColor: "#ffffff"
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: [35, 22]
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, 35, 22);
+        const pdfBlob = pdf.output('blob');
+        const file = new File([pdfBlob], `tem_${document.getElementById('num').textContent}.pdf`, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Tem 35x22' });
+        } else {
+          // Fallback: tải xuống
+          pdf.save(`tem_${document.getElementById('num').textContent}.pdf`);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Không thể chia sẻ PDF. Hãy thử tải xuống.');
+      }
+    }
+
+    document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
   </script>
 </body>
 </html>
