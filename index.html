@@ -21,21 +21,19 @@
     .label {
       width: 35mm;
       height: 22mm;
-      border: 0.3mm solid #ccc;
-      padding: 1.2mm 1.5mm;
+      padding: 1mm 1.2mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      overflow: hidden;
       background: white;
+      overflow: hidden;
     }
     @media print {
       body { background: white; }
-      .label { border: none; }
       .no-print { display: none !important; }
     }
     .top-text {
-      font-size: 5.5pt;
+      font-size: 5pt;
       font-weight: bold;
       text-align: center;
       white-space: nowrap;
@@ -45,8 +43,13 @@
     .middle {
       display: flex;
       align-items: center;
-      gap: 1.5mm;
+      gap: 1.2mm;
       flex: 1;
+    }
+    #qrcode {
+      width: 10.5mm;
+      height: 10.5mm;
+      flex-shrink: 0;
     }
     .barcode-area {
       flex: 1;
@@ -54,16 +57,27 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-width: 0;
+    }
+    #barcode {
+      width: 100%;
+      max-height: 7.5mm;
     }
     .barcode-number {
-      font-size: 6pt;
+      font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.3mm;
+      margin-top: 0.2mm;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
     }
     .bottom-text {
-      font-size: 9pt;
-      font-weight: 900;
+      font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+      font-size: 8.5pt;
+      font-weight: 700;
       text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .print-btn {
       position: fixed;
@@ -82,12 +96,11 @@
 </head>
 <body>
 
-  <!-- CHỈ 1 TEM -->
   <div class="label">
     <div class="top-text" id="top">PHU TUNG THIENTHAOCHBL</div>
     
     <div class="middle">
-      <canvas id="qr" width="42" height="42"></canvas>
+      <div id="qrcode"></div>
       <div class="barcode-area">
         <svg id="barcode"></svg>
         <div class="barcode-number" id="num">---</div>
@@ -99,8 +112,9 @@
 
   <button class="print-btn no-print" onclick="window.print()">In tem ngay</button>
 
+  <!-- Thư viện ổn định -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
     function veTem() {
@@ -115,26 +129,31 @@
       document.getElementById('num').textContent = barcode;
       document.getElementById('bottom').textContent = bottom;
 
+      // Vẽ barcode
       JsBarcode("#barcode", barcode, {
         format: "CODE128",
-        width: 1.1,
-        height: 28,
+        width: 0.9,
+        height: 26,
         displayValue: false,
         margin: 0
       });
 
-      QRCode.toCanvas(document.getElementById('qr'), qr, {
-        width: 42,
-        margin: 0,
-        errorCorrectionLevel: 'M'
+      // Vẽ QR (thư viện qrcodejs)
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), {
+        text: qr,
+        width: 40,
+        height: 40,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
       });
     }
 
-    if (typeof JsBarcode !== 'undefined' && typeof QRCode !== 'undefined') {
-      veTem();
-    } else {
-      window.addEventListener('load', veTem);
-    }
+    // Đợi thư viện load
+    window.addEventListener('load', function() {
+      setTimeout(veTem, 100);
+    });
   </script>
 </body>
 </html>
