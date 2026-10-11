@@ -29,17 +29,21 @@
     .label {
       width: 35mm;
       height: 22mm;
-      padding: 1mm 1.2mm;
+      /* BÙ LỆCH SANG TRÁI - chỉnh giá trị này nếu vẫn lệch */
+      padding: 1mm 1.5mm 1mm 0.6mm;   /* top right bottom left  → giảm padding-left */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
+      /* Dịch toàn bộ nội dung sang trái một chút */
+      transform: translateX(-0.4mm);
     }
     .label.empty {
       background: transparent;
       border: none;
+      transform: none;
     }
     @media print {
       body { background: white; margin: 0; padding: 0; }
@@ -54,12 +58,14 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: -0.2px;
     }
     .middle {
       display: flex;
       align-items: center;
-      gap: 1.2mm;
+      gap: 1mm;
       flex: 1;
+      min-height: 0;
     }
     .qrcode {
       width: 10.5mm;
@@ -74,22 +80,27 @@
       justify-content: center;
       min-width: 0;
     }
-    .barcode { width: 100%; max-height: 7.5mm; }
+    .barcode {
+      width: 100%;
+      max-height: 7.2mm;
+    }
     .barcode-number {
       font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.2mm;
-      letter-spacing: 0.3px;
+      margin-top: 0.15mm;
+      letter-spacing: 0.2px;
       white-space: nowrap;
     }
     .bottom-text {
       font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
-      font-size: 8.5pt;
       font-weight: 700;
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
+      /* Không dùng ellipsis nữa, sẽ tự giảm font */
+      line-height: 1.05;
+      /* Giá trị mặc định, JS sẽ override */
+      font-size: 8.5pt;
     }
     .button-container {
       display: flex;
@@ -110,9 +121,7 @@
   </style>
 </head>
 <body>
-
   <div id="printArea"></div>
-
   <div class="button-container no-print">
     <button id="sharePdfBtn">Chia sẻ PDF</button>
     <button id="printBtn" onclick="window.print()">In tem ngay</button>
@@ -124,9 +133,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
+    // ========== CẤU HÌNH BÙ LỆCH ==========
+    // Nếu in vẫn lệch phải → tăng giá trị này (ví dụ -0.6mm, -0.8mm)
+    // Nếu lệch trái → giảm (ví dụ -0.2mm)
+    const OFFSET_X = '-0.45mm';   // dịch sang trái
+
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
+      // Áp dụng offset
+      div.style.transform = `translateX(${OFFSET_X})`;
+
+      // Luôn viết HOA tên sản phẩm
+      const bottomUpper = (bottom || '').toUpperCase();
+
       div.innerHTML = `
         <div class="top-text">${top}</div>
         <div class="middle">
@@ -136,9 +156,23 @@
             <div class="barcode-number">${barcode}</div>
           </div>
         </div>
-        <div class="bottom-text">${bottom}</div>
+        <div class="bottom-text" id="bottom_${id}">${bottomUpper}</div>
       `;
       return div;
+    }
+
+    // Tự động giảm font-size cho đến khi vừa khung
+    function fitText(el, maxFontPt = 9.5, minFontPt = 5.5) {
+      if (!el) return;
+      let fontSize = maxFontPt;
+      el.style.fontSize = fontSize + 'pt';
+      el.style.whiteSpace = 'nowrap';
+
+      // Giảm dần cho đến khi không bị tràn
+      while (fontSize > minFontPt && el.scrollWidth > el.clientWidth) {
+        fontSize -= 0.3;
+        el.style.fontSize = fontSize + 'pt';
+      }
     }
 
     function veTem() {
@@ -185,25 +219,26 @@
           const right = createLabel(labels[i+1].top, labels[i+1].barcode, labels[i+1].qr, labels[i+1].bottom, i+1);
           row.appendChild(right);
         } else {
-          // Số lẻ → để trống bên phải (không phí tem nếu máy in đúng)
           const empty = document.createElement('div');
           empty.className = 'label empty';
           row.appendChild(empty);
         }
-
         printArea.appendChild(row);
       }
 
-      // Vẽ barcode + QR
+      // Vẽ barcode + QR + fit text
       setTimeout(() => {
         labels.forEach((l, idx) => {
+          // Barcode
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.9,
-            height: 26,
+            width: 0.85,
+            height: 25,
             displayValue: false,
             margin: 0
           });
+
+          // QR
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
             width: 40,
@@ -212,16 +247,19 @@
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M
           });
-        });
-      }, 100);
 
-      // Đổi page size
+          // Tự động chỉnh size tên SP
+          fitText(document.getElementById(`bottom_${idx}`), 9.2, 5.8);
+        });
+      }, 80);
+
+      // Đổi page size cho in đôi
       const style = document.createElement('style');
       style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
       document.head.appendChild(style);
     }
 
-    window.addEventListener('load', () => setTimeout(veTem, 150));
+    window.addEventListener('load', () => setTimeout(veTem, 120));
 
     // Chia sẻ PDF
     async function sharePdf() {
@@ -229,31 +267,21 @@
         const element = document.getElementById("printArea");
         const canvas = await html2canvas(element, {
           scale: 3,
-          backgroundColor: "#ffffff"
+          backgroundColor: "#ffffff",
+          useCORS: true
         });
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-
-        // Tính số trang (mỗi hàng 1 trang)
         const rows = element.querySelectorAll('.row').length;
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
           format: [70, 22]
         });
-
-        // Vì html2canvas lấy cả khối, ta cắt theo từng hàng sẽ phức tạp.
-        // Cách đơn giản: tạo PDF nhiều trang bằng cách in từng hàng
-        // (ở đây dùng cách đơn giản nhất - 1 ảnh lớn, máy in sẽ cắt)
-
         pdf.addImage(imgData, 'PNG', 0, 0, 70, 22 * rows);
-        // Lưu ý: một số máy in/RawBT xử lý tốt hơn nếu mỗi trang 1 hàng.
-        // Nếu cần chính xác hơn bảo mình chỉnh tiếp.
-
         const fileName = `tem_${Date.now()}.pdf`;
         const pdfBlob = pdf.output('blob');
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], title: 'Tem' });
         } else {
@@ -264,7 +292,6 @@
         alert('Không thể chia sẻ PDF');
       }
     }
-
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
   </script>
 </body>
