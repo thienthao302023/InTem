@@ -29,14 +29,15 @@
     .label {
       width: 35mm;
       height: 22mm;
-      padding: 0.45mm 1.1mm 0.5mm 0.7mm;
+      /* Lên cao thêm + qua trái thêm */
+      padding: 0.28mm 1.1mm 0.5mm 0.55mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
-      transform: translateX(-0.35mm);
+      transform: translateX(-0.55mm);
     }
     .label.empty {
       background: transparent;
@@ -71,7 +72,6 @@
       width: 10.5mm;
       height: 10.5mm;
       flex-shrink: 0;
-      /* Ép QR sắc nét */
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
@@ -145,7 +145,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    const OFFSET_X = '-0.35mm';
+    // Qua trái thêm chút
+    const OFFSET_X = '-0.55mm';
 
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
@@ -235,14 +236,13 @@
             margin: 0
           });
 
-          // ===== QR ĐỘ PHÂN GIẢI RẤT CAO (200px) =====
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 200,          // tăng mạnh
+            width: 200,
             height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H   // mức sửa lỗi cao hơn một chút
+            correctLevel: QRCode.CorrectLevel.H
           });
 
           fitText(document.getElementById(`bottom_${idx}`), 9.0, 5.8);
@@ -256,7 +256,6 @@
 
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // ========== PDF NÉT ==========
     async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
