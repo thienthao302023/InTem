@@ -24,20 +24,39 @@
     }
     .row {
       display: flex;
-      width: 70mm;
+      width: 70mm;                 /* Chiều rộng 2 tem */
     }
     .label {
-      width: 35mm;
-      height: 22mm;
-      /* Lên cao thêm + qua trái thêm */
-      padding: 0.28mm 1.1mm 0.5mm 0.55mm;
+      width: 35mm;                  /* Chiều rộng 1 tem */
+      height: 22mm;                 /* Chiều cao 1 tem */
+
+      /* ========== CÁC KHOẢNG CÁCH QUAN TRỌNG ========== */
+      /* padding: trên | phải | dưới | trái                  */
+      padding: 0.2mm 1.1mm 0.5mm 0.2mm;
+
+      /*
+        Giải thích padding:
+        - 0.2mm  → khoảng cách từ mép trên tem đến tiêu đề (càng nhỏ càng sát mép trên)
+        - 1.1mm  → khoảng cách bên phải (tránh bị cắt chữ bên phải)
+        - 0.5mm  → khoảng cách từ tên hàng đến mép dưới
+        - 0.2mm  → khoảng cách bên trái (càng nhỏ càng sát mép trái)
+      */
+
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
+
+      /* Dịch toàn bộ nội dung sang trái/phải */
       transform: translateX(-0.55mm);
+      /*
+        transform: translateX()
+        - Số âm  → dịch sang TRÁI (ví dụ -0.55mm)
+        - Số dương → dịch sang PHẢI (ví dụ 0.3mm)
+        - Càng lớn số âm thì dịch trái càng nhiều
+      */
     }
     .label.empty {
       background: transparent;
@@ -51,7 +70,7 @@
       .row { page-break-inside: avoid; }
     }
     .top-text {
-      font-size: 5pt;
+      font-size: 4pt;               /* Cỡ chữ tiêu đề */
       font-weight: bold;
       text-align: center;
       white-space: nowrap;
@@ -63,14 +82,14 @@
     .middle {
       display: flex;
       align-items: center;
-      gap: 1mm;
+      gap: 1mm;                     /* Khoảng cách giữa QR và mã vạch */
       flex: 1;
       min-height: 0;
-      max-height: 11mm;
+      max-height: 11mm;             /* Chiều cao tối đa vùng QR + barcode */
     }
     .qrcode {
-      width: 10.5mm;
-      height: 10.5mm;
+      width: 10.5mm;                /* Kích thước QR (chiều ngang) */
+      height: 10.5mm;               /* Kích thước QR (chiều dọc) */
       flex-shrink: 0;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
@@ -92,13 +111,13 @@
       height: 100%;
     }
     .barcode {
-      width: 100%;
-      max-height: 7mm;
+      width: 70%;
+      max-height: 6mm;              /* Chiều cao tối đa của vạch barcode */
     }
     .barcode-number {
-      font-size: 5.4pt;
+      font-size: 5.4pt;             /* Cỡ chữ số dưới barcode */
       font-weight: 600;
-      margin-top: 0.15mm;
+      margin-top: 0.15mm;           /* Khoảng cách giữa vạch và số */
       letter-spacing: 0.15px;
       white-space: nowrap;
     }
@@ -109,8 +128,8 @@
       white-space: nowrap;
       overflow: hidden;
       line-height: 1.05;
-      font-size: 8.6pt;
-      padding-top: 0.25mm;
+      font-size: 8.6pt;             /* Cỡ chữ tên hàng (sẽ tự co nếu dài) */
+      padding-top: 0.0mm;          /* Khoảng cách từ QR/barcode xuống tên hàng */
     }
     .button-container {
       display: flex;
@@ -145,8 +164,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    // Qua trái thêm chút
-    const OFFSET_X = '-0.55mm';
+    // ======================================================
+    // CHỈNH LỆCH TRÁI / PHẢI TẠI ĐÂY
+    // Số âm = sang trái | Số dương = sang phải
+    // Ví dụ: '-0.7mm'  hoặc  '-0.3mm'
+    // ======================================================
+    const OFFSET_X = '-1mm';
 
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
@@ -230,15 +253,15 @@
         labels.forEach((l, idx) => {
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.88,
-            height: 24,
+            width: 0.88,              // Độ dày vạch barcode (càng lớn càng đậm)
+            height: 24,               // Chiều cao vạch barcode (pixel)
             displayValue: false,
             margin: 0
           });
 
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 200,
+            width: 200,               // Độ phân giải QR (càng cao càng nét, nên giữ ≥ 180)
             height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
@@ -275,7 +298,7 @@
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
           const canvas = await html2canvas(rows[i], {
-            scale: 8,
+            scale: 8,                 // Độ nét PDF (6~10). Cao hơn = nét hơn nhưng file nặng
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
