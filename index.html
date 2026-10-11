@@ -36,7 +36,7 @@
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
-      transform: translateX(-0.45mm); /* Bù lệch sang trái */
+      transform: translateX(-0.45mm);
     }
     .label.empty {
       background: transparent;
@@ -113,7 +113,7 @@
       cursor: pointer;
       font-weight: 600;
     }
-    #shareImgBtn { background: #16a34a; }   /* Xanh lá - khuyến nghị RawBT */
+    #shareImgBtn { background: #16a34a; }
     #sharePdfBtn { background: #e91e63; }
     #printBtn    { background: #2563eb; }
   </style>
@@ -133,14 +133,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    // ========== CẤU HÌNH BÙ LỆCH ==========
-    const OFFSET_X = '-0.45mm';   // chỉnh nếu vẫn lệch
+    const OFFSET_X = '-0.45mm';
 
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
       div.style.transform = `translateX(${OFFSET_X})`;
-
       const bottomUpper = (bottom || '').toUpperCase();
 
       div.innerHTML = `
@@ -162,7 +160,6 @@
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
       el.style.whiteSpace = 'nowrap';
-
       while (fontSize > minFontPt && el.scrollWidth > el.clientWidth) {
         fontSize -= 0.3;
         el.style.fontSize = fontSize + 'pt';
@@ -244,48 +241,58 @@
 
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // ========== CHIA SẺ ẢNH (KHUYẾN NGHỊ CHO RAWBT) ==========
+    // ========== CHIA SẺ ẢNH - MỖI HÀNG 1 ẢNH (quan trọng) ==========
     async function shareImage() {
       try {
-        const element = document.getElementById("printArea");
-        
-        const canvas = await html2canvas(element, {
-          scale: 4,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false
-        });
+        const rows = document.querySelectorAll('#printArea .row');
+        if (rows.length === 0) {
+          alert('Không có tem để in');
+          return;
+        }
 
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-        const fileName = `tem_${Date.now()}.png`;
-        const file = new File([blob], fileName, { type: 'image/png' });
+        const files = [];
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        for (let i = 0; i < rows.length; i++) {
+          const canvas = await html2canvas(rows[i], {
+            scale: 4,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false
+          });
+
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+          const file = new File([blob], `tem_hang_${i + 1}.png`, { type: 'image/png' });
+          files.push(file);
+        }
+
+        if (navigator.canShare && navigator.canShare({ files })) {
           await navigator.share({
-            files: [file],
-            title: 'Tem in',
-            text: 'In tem qua RawBT'
+            files: files,
+            title: 'Tem in RawBT',
+            text: 'In từng hàng tem'
           });
         } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-          alert('Đã tải ảnh về. Mở RawBT → chọn ảnh vừa tải để in.');
+          // Fallback: tải từng ảnh
+          files.forEach((file, idx) => {
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+          alert(`Đã tải ${files.length} ảnh. Mở RawBT và in lần lượt từng ảnh.`);
         }
       } catch (e) {
         console.error(e);
-        alert('Không thể chia sẻ ảnh. Thử lại hoặc dùng nút PDF.');
+        alert('Lỗi chia sẻ ảnh: ' + e.message);
       }
     }
 
-    // ========== CHIA SẺ PDF (dự phòng) ==========
+    // ========== CHIA SẺ PDF (mỗi trang 1 hàng) ==========
     async function sharePdf() {
       try {
-        const element = document.getElementById("printArea");
-        const rows = element.querySelectorAll('.row');
+        const rows = document.querySelectorAll('#printArea .row');
         const { jsPDF } = window.jspdf;
 
         const pdf = new jsPDF({
