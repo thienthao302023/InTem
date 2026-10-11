@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tem 35x22</title>
+  <title>Tem 35x22 - RawBT</title>
   <style>
     @page { size: 35mm 22mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,17 +29,19 @@
     .label {
       width: 35mm;
       height: 22mm;
-      padding: 1mm 1.2mm;
+      padding: 1mm 1.5mm 1mm 0.6mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
+      transform: translateX(-0.45mm); /* Bù lệch sang trái */
     }
     .label.empty {
       background: transparent;
       border: none;
+      transform: none;
     }
     @media print {
       body { background: white; margin: 0; padding: 0; }
@@ -54,12 +56,14 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: -0.2px;
     }
     .middle {
       display: flex;
       align-items: center;
-      gap: 1.2mm;
+      gap: 1mm;
       flex: 1;
+      min-height: 0;
     }
     .qrcode {
       width: 10.5mm;
@@ -74,22 +78,25 @@
       justify-content: center;
       min-width: 0;
     }
-    .barcode { width: 100%; max-height: 7.5mm; }
+    .barcode {
+      width: 100%;
+      max-height: 7.2mm;
+    }
     .barcode-number {
       font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.2mm;
-      letter-spacing: 0.3px;
+      margin-top: 0.15mm;
+      letter-spacing: 0.2px;
       white-space: nowrap;
     }
     .bottom-text {
       font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
-      font-size: 8.5pt;
       font-weight: 700;
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.05;
+      font-size: 8.5pt;
     }
     .button-container {
       display: flex;
@@ -98,24 +105,26 @@
       justify-content: center;
     }
     button {
-      font-size: 16px;
-      padding: 10px 18px;
+      font-size: 15px;
+      padding: 12px 18px;
       color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      font-weight: 600;
     }
+    #shareImgBtn { background: #16a34a; }   /* Xanh lá - khuyến nghị RawBT */
     #sharePdfBtn { background: #e91e63; }
-    #printBtn { background: #2563eb; }
+    #printBtn    { background: #2563eb; }
   </style>
 </head>
 <body>
-
   <div id="printArea"></div>
 
   <div class="button-container no-print">
+    <button id="shareImgBtn">Chia sẻ ảnh in (RawBT)</button>
     <button id="sharePdfBtn">Chia sẻ PDF</button>
-    <button id="printBtn" onclick="window.print()">In tem ngay</button>
+    <button id="printBtn" onclick="window.print()">In trình duyệt</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
@@ -124,9 +133,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
+    // ========== CẤU HÌNH BÙ LỆCH ==========
+    const OFFSET_X = '-0.45mm';   // chỉnh nếu vẫn lệch
+
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
+      div.style.transform = `translateX(${OFFSET_X})`;
+
+      const bottomUpper = (bottom || '').toUpperCase();
+
       div.innerHTML = `
         <div class="top-text">${top}</div>
         <div class="middle">
@@ -136,22 +152,32 @@
             <div class="barcode-number">${barcode}</div>
           </div>
         </div>
-        <div class="bottom-text">${bottom}</div>
+        <div class="bottom-text" id="bottom_${id}">${bottomUpper}</div>
       `;
       return div;
+    }
+
+    function fitText(el, maxFontPt = 9.2, minFontPt = 5.8) {
+      if (!el) return;
+      let fontSize = maxFontPt;
+      el.style.fontSize = fontSize + 'pt';
+      el.style.whiteSpace = 'nowrap';
+
+      while (fontSize > minFontPt && el.scrollWidth > el.clientWidth) {
+        fontSize -= 0.3;
+        el.style.fontSize = fontSize + 'pt';
+      }
     }
 
     function veTem() {
       const params = new URLSearchParams(window.location.search);
       const top = params.get('top') || 'PHU TUNG THIENTHAOCHBL';
 
-      // SP1
       const barcode1 = params.get('barcode') || '0000000000000';
       const qr1 = params.get('qr') || barcode1;
       const bottom1 = params.get('bottom') || '---';
       const qty1 = parseInt(params.get('qty1') || '1');
 
-      // SP2 (tùy chọn)
       const barcode2 = params.get('barcode2');
       const qr2 = params.get('qr2') || barcode2;
       const bottom2 = params.get('bottom2') || '---';
@@ -160,7 +186,6 @@
       const printArea = document.getElementById('printArea');
       printArea.innerHTML = '';
 
-      // Tạo danh sách tem
       let labels = [];
       for (let i = 0; i < qty1; i++) {
         labels.push({ top, barcode: barcode1, qr: qr1, bottom: bottom1 });
@@ -171,39 +196,34 @@
         }
       }
 
-      // Ghép thành hàng đôi (2 tem / hàng)
       for (let i = 0; i < labels.length; i += 2) {
         const row = document.createElement('div');
         row.className = 'row';
 
-        // Tem trái
         const left = createLabel(labels[i].top, labels[i].barcode, labels[i].qr, labels[i].bottom, i);
         row.appendChild(left);
 
-        // Tem phải
         if (i + 1 < labels.length) {
           const right = createLabel(labels[i+1].top, labels[i+1].barcode, labels[i+1].qr, labels[i+1].bottom, i+1);
           row.appendChild(right);
         } else {
-          // Số lẻ → để trống bên phải (không phí tem nếu máy in đúng)
           const empty = document.createElement('div');
           empty.className = 'label empty';
           row.appendChild(empty);
         }
-
         printArea.appendChild(row);
       }
 
-      // Vẽ barcode + QR
       setTimeout(() => {
         labels.forEach((l, idx) => {
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.9,
-            height: 26,
+            width: 0.85,
+            height: 25,
             displayValue: false,
             margin: 0
           });
+
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
             width: 40,
@@ -212,59 +232,96 @@
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M
           });
-        });
-      }, 100);
 
-      // Đổi page size
+          fitText(document.getElementById(`bottom_${idx}`), 9.2, 5.8);
+        });
+      }, 80);
+
       const style = document.createElement('style');
       style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
       document.head.appendChild(style);
     }
 
-    window.addEventListener('load', () => setTimeout(veTem, 150));
+    window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // Chia sẻ PDF
+    // ========== CHIA SẺ ẢNH (KHUYẾN NGHỊ CHO RAWBT) ==========
+    async function shareImage() {
+      try {
+        const element = document.getElementById("printArea");
+        
+        const canvas = await html2canvas(element, {
+          scale: 4,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          logging: false
+        });
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+        const fileName = `tem_${Date.now()}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Tem in',
+            text: 'In tem qua RawBT'
+          });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert('Đã tải ảnh về. Mở RawBT → chọn ảnh vừa tải để in.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Không thể chia sẻ ảnh. Thử lại hoặc dùng nút PDF.');
+      }
+    }
+
+    // ========== CHIA SẺ PDF (dự phòng) ==========
     async function sharePdf() {
       try {
         const element = document.getElementById("printArea");
-        const canvas = await html2canvas(element, {
-          scale: 3,
-          backgroundColor: "#ffffff"
-        });
-        const imgData = canvas.toDataURL('image/png');
+        const rows = element.querySelectorAll('.row');
         const { jsPDF } = window.jspdf;
 
-        // Tính số trang (mỗi hàng 1 trang)
-        const rows = element.querySelectorAll('.row').length;
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
           format: [70, 22]
         });
 
-        // Vì html2canvas lấy cả khối, ta cắt theo từng hàng sẽ phức tạp.
-        // Cách đơn giản: tạo PDF nhiều trang bằng cách in từng hàng
-        // (ở đây dùng cách đơn giản nhất - 1 ảnh lớn, máy in sẽ cắt)
+        for (let i = 0; i < rows.length; i++) {
+          if (i > 0) pdf.addPage([70, 22], 'landscape');
 
-        pdf.addImage(imgData, 'PNG', 0, 0, 70, 22 * rows);
-        // Lưu ý: một số máy in/RawBT xử lý tốt hơn nếu mỗi trang 1 hàng.
-        // Nếu cần chính xác hơn bảo mình chỉnh tiếp.
+          const canvas = await html2canvas(rows[i], {
+            scale: 4,
+            backgroundColor: "#ffffff",
+            useCORS: true
+          });
+          const imgData = canvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22);
+        }
 
         const fileName = `tem_${Date.now()}.pdf`;
         const pdfBlob = pdf.output('blob');
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Tem' });
+          await navigator.share({ files: [file], title: 'Tem PDF' });
         } else {
           pdf.save(fileName);
         }
       } catch (e) {
         console.error(e);
-        alert('Không thể chia sẻ PDF');
+        alert('Không thể tạo PDF');
       }
     }
 
+    document.getElementById("shareImgBtn").addEventListener("click", shareImage);
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
   </script>
 </body>
