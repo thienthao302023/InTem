@@ -29,14 +29,15 @@
     .label {
       width: 35mm;
       height: 22mm;
-      padding: 1mm 1.5mm 1mm 0.6mm;
+      /* Giảm padding-top để đẩy nội dung lên cao + dịch trái thêm */
+      padding: 0.5mm 1.4mm 0.8mm 0.4mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
-      transform: translateX(-0.45mm); /* Bù lệch sang trái */
+      transform: translateX(-0.75mm); /* Dịch trái nhiều hơn */
     }
     .label.empty {
       background: transparent;
@@ -61,13 +62,13 @@
     .middle {
       display: flex;
       align-items: center;
-      gap: 1mm;
+      gap: 0.9mm;
       flex: 1;
       min-height: 0;
     }
     .qrcode {
-      width: 10.5mm;
-      height: 10.5mm;
+      width: 8.8mm;          /* QR nhỏ lại */
+      height: 8.8mm;
       flex-shrink: 0;
     }
     .barcode-area {
@@ -80,12 +81,12 @@
     }
     .barcode {
       width: 100%;
-      max-height: 7.2mm;
+      max-height: 7mm;
     }
     .barcode-number {
       font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.15mm;
+      margin-top: 0.1mm;
       letter-spacing: 0.2px;
       white-space: nowrap;
     }
@@ -96,7 +97,7 @@
       white-space: nowrap;
       overflow: hidden;
       line-height: 1.05;
-      font-size: 8.5pt;
+      font-size: 9pt;          /* Cho phép to hơn vì QR nhỏ */
     }
     .button-container {
       display: flex;
@@ -113,7 +114,6 @@
       cursor: pointer;
       font-weight: 600;
     }
-    #shareImgBtn { background: #16a34a; }   /* Xanh lá - khuyến nghị RawBT */
     #sharePdfBtn { background: #e91e63; }
     #printBtn    { background: #2563eb; }
   </style>
@@ -122,7 +122,6 @@
   <div id="printArea"></div>
 
   <div class="button-container no-print">
-    <button id="shareImgBtn">Chia sẻ ảnh in (RawBT)</button>
     <button id="sharePdfBtn">Chia sẻ PDF</button>
     <button id="printBtn" onclick="window.print()">In trình duyệt</button>
   </div>
@@ -134,7 +133,7 @@
 
   <script>
     // ========== CẤU HÌNH BÙ LỆCH ==========
-    const OFFSET_X = '-0.45mm';   // chỉnh nếu vẫn lệch
+    const OFFSET_X = '-0.75mm';   // dịch trái thêm
 
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
@@ -157,7 +156,7 @@
       return div;
     }
 
-    function fitText(el, maxFontPt = 9.2, minFontPt = 5.8) {
+    function fitText(el, maxFontPt = 9.5, minFontPt = 6) {
       if (!el) return;
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
@@ -218,22 +217,23 @@
         labels.forEach((l, idx) => {
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.85,
-            height: 25,
+            width: 0.9,
+            height: 24,
             displayValue: false,
             margin: 0
           });
 
+          // QR nhỏ hơn
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 40,
-            height: 40,
+            width: 34,
+            height: 34,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M
           });
 
-          fitText(document.getElementById(`bottom_${idx}`), 9.2, 5.8);
+          fitText(document.getElementById(`bottom_${idx}`), 9.5, 6);
         });
       }, 80);
 
@@ -244,50 +244,16 @@
 
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // ========== CHIA SẺ ẢNH (KHUYẾN NGHỊ CHO RAWBT) ==========
-    async function shareImage() {
-      try {
-        const element = document.getElementById("printArea");
-        
-        const canvas = await html2canvas(element, {
-          scale: 4,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false
-        });
-
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-        const fileName = `tem_${Date.now()}.png`;
-        const file = new File([blob], fileName, { type: 'image/png' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Tem in',
-            text: 'In tem qua RawBT'
-          });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-          alert('Đã tải ảnh về. Mở RawBT → chọn ảnh vừa tải để in.');
-        }
-      } catch (e) {
-        console.error(e);
-        alert('Không thể chia sẻ ảnh. Thử lại hoặc dùng nút PDF.');
-      }
-    }
-
-    // ========== CHIA SẺ PDF (dự phòng) ==========
+    // ========== CHIA SẺ PDF (độ nét cao) ==========
     async function sharePdf() {
       try {
-        const element = document.getElementById("printArea");
-        const rows = element.querySelectorAll('.row');
-        const { jsPDF } = window.jspdf;
+        const rows = document.querySelectorAll('#printArea .row');
+        if (rows.length === 0) {
+          alert('Không có tem để in');
+          return;
+        }
 
+        const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
@@ -297,13 +263,17 @@
         for (let i = 0; i < rows.length; i++) {
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
+          // Tăng scale lên 6 để PDF nét hơn
           const canvas = await html2canvas(rows[i], {
-            scale: 4,
+            scale: 6,
             backgroundColor: "#ffffff",
-            useCORS: true
+            useCORS: true,
+            logging: false,
+            allowTaint: true
           });
-          const imgData = canvas.toDataURL('image/png');
-          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22);
+
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'FAST');
         }
 
         const fileName = `tem_${Date.now()}.pdf`;
@@ -317,11 +287,10 @@
         }
       } catch (e) {
         console.error(e);
-        alert('Không thể tạo PDF');
+        alert('Không thể tạo PDF: ' + e.message);
       }
     }
 
-    document.getElementById("shareImgBtn").addEventListener("click", shareImage);
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
   </script>
 </body>
