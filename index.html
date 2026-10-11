@@ -29,11 +29,10 @@
     .label {
       width: 35mm;
       height: 22mm;
-      /* Tiêu đề sát mép trên + nội dung hẹp lại */
       padding: 0.15mm 1.3mm 0.6mm 0.35mm;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;   /* đẩy nội dung lên trên */
+      justify-content: flex-start;
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
@@ -59,20 +58,25 @@
       text-overflow: ellipsis;
       letter-spacing: -0.2px;
       line-height: 1.1;
-      margin-bottom: 0.3mm;   /* khoảng cách rất nhỏ với QR */
+      margin-bottom: 0.3mm;
     }
     .middle {
       display: flex;
       align-items: center;
       gap: 1mm;
-      /* Chiều cao cố định để phần trên hẹp lại */
       height: 11.2mm;
       flex-shrink: 0;
     }
     .qrcode {
-      width: 10.5mm;         /* QR kích thước cũ */
+      width: 10.5mm;
       height: 10.5mm;
       flex-shrink: 0;
+    }
+    /* Quan trọng: làm QR nét khi scale */
+    .qrcode img, .qrcode canvas {
+      width: 100% !important;
+      height: 100% !important;
+      image-rendering: pixelated;
     }
     .barcode-area {
       flex: 1;
@@ -102,7 +106,7 @@
       overflow: hidden;
       line-height: 1.05;
       font-size: 8.8pt;
-      margin-top: auto;      /* đẩy tên hàng xuống dưới */
+      margin-top: auto;
       padding-top: 0.4mm;
     }
     .button-container {
@@ -228,11 +232,11 @@
             margin: 0
           });
 
-          // QR kích thước cũ
+          // QR tạo ở độ phân giải CAO (150px) rồi CSS thu nhỏ → rất nét
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 40,
-            height: 40,
+            width: 150,
+            height: 150,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M
@@ -249,7 +253,7 @@
 
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // ========== CHIA SẺ PDF (độ nét cao) ==========
+    // ========== CHIA SẺ PDF NÉT CAO ==========
     async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
@@ -269,15 +273,20 @@
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
           const canvas = await html2canvas(rows[i], {
-            scale: 6,
+            scale: 8,                    // tăng mạnh độ nét
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
-            allowTaint: true
+            allowTaint: true,
+            imageTimeout: 0
           });
 
+          // Tắt làm mịn để giữ nét pixel
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+
           const imgData = canvas.toDataURL('image/png', 1.0);
-          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'FAST');
+          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'NONE');
         }
 
         const fileName = `tem_${Date.now()}.pdf`;
