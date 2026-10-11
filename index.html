@@ -29,15 +29,15 @@
     .label {
       width: 35mm;
       height: 22mm;
-      /* Giảm padding-top để đẩy nội dung lên cao + dịch trái thêm */
-      padding: 0.5mm 1.4mm 0.8mm 0.4mm;
+      /* Tiêu đề sát mép trên + nội dung hẹp lại */
+      padding: 0.15mm 1.3mm 0.6mm 0.35mm;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;   /* đẩy nội dung lên trên */
       background: white;
       overflow: hidden;
       border: 0.3mm solid #ccc;
-      transform: translateX(-0.75mm); /* Dịch trái nhiều hơn */
+      transform: translateX(-0.75mm);
     }
     .label.empty {
       background: transparent;
@@ -58,17 +58,20 @@
       overflow: hidden;
       text-overflow: ellipsis;
       letter-spacing: -0.2px;
+      line-height: 1.1;
+      margin-bottom: 0.3mm;   /* khoảng cách rất nhỏ với QR */
     }
     .middle {
       display: flex;
       align-items: center;
-      gap: 0.9mm;
-      flex: 1;
-      min-height: 0;
+      gap: 1mm;
+      /* Chiều cao cố định để phần trên hẹp lại */
+      height: 11.2mm;
+      flex-shrink: 0;
     }
     .qrcode {
-      width: 8.8mm;          /* QR nhỏ lại */
-      height: 8.8mm;
+      width: 10.5mm;         /* QR kích thước cũ */
+      height: 10.5mm;
       flex-shrink: 0;
     }
     .barcode-area {
@@ -78,15 +81,16 @@
       align-items: center;
       justify-content: center;
       min-width: 0;
+      height: 100%;
     }
     .barcode {
       width: 100%;
-      max-height: 7mm;
+      max-height: 7.2mm;
     }
     .barcode-number {
       font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.1mm;
+      margin-top: 0.15mm;
       letter-spacing: 0.2px;
       white-space: nowrap;
     }
@@ -97,7 +101,9 @@
       white-space: nowrap;
       overflow: hidden;
       line-height: 1.05;
-      font-size: 9pt;          /* Cho phép to hơn vì QR nhỏ */
+      font-size: 8.8pt;
+      margin-top: auto;      /* đẩy tên hàng xuống dưới */
+      padding-top: 0.4mm;
     }
     .button-container {
       display: flex;
@@ -132,8 +138,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    // ========== CẤU HÌNH BÙ LỆCH ==========
-    const OFFSET_X = '-0.75mm';   // dịch trái thêm
+    const OFFSET_X = '-0.75mm';
 
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
@@ -156,7 +161,7 @@
       return div;
     }
 
-    function fitText(el, maxFontPt = 9.5, minFontPt = 6) {
+    function fitText(el, maxFontPt = 9.2, minFontPt = 5.8) {
       if (!el) return;
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
@@ -218,22 +223,22 @@
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
             width: 0.9,
-            height: 24,
+            height: 25,
             displayValue: false,
             margin: 0
           });
 
-          // QR nhỏ hơn
+          // QR kích thước cũ
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M
           });
 
-          fitText(document.getElementById(`bottom_${idx}`), 9.5, 6);
+          fitText(document.getElementById(`bottom_${idx}`), 9.2, 5.8);
         });
       }, 80);
 
@@ -263,7 +268,6 @@
         for (let i = 0; i < rows.length; i++) {
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
-          // Tăng scale lên 6 để PDF nét hơn
           const canvas = await html2canvas(rows[i], {
             scale: 6,
             backgroundColor: "#ffffff",
