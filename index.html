@@ -7,7 +7,6 @@
   <style>
     @page { size: 35mm 22mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: Arial, Helvetica, sans-serif;
       background: #f0f0f0;
@@ -18,46 +17,38 @@
       padding: 15px;
       gap: 15px;
     }
-
     #printArea {
       display: flex;
       flex-direction: column;
       gap: 0;
     }
-
     .row {
       display: flex;
-      width: 70mm;                     /* Tổng chiều rộng 2 tem (35mm + 35mm) */
+      width: 70mm;
     }
-
-    /* ====================== TEM ====================== */
     .label {
-      width: 35mm;                    /* Chiều rộng 1 tem */
-      height: 22mm;                   /* Chiều cao 1 tem */
-      padding: 0.5mm 2.4mm 0.8mm 0mm; /* GIỮ NGUYÊN vị trí tiêu đề ở trên */
+      width: 35mm;
+      height: 22mm;
+      padding: 0.5mm 2.4mm 1mm 0mm;
       display: flex;
       flex-direction: column;
-      justify-content: space-between; /* Tiêu đề trên - QR giữa - Tên hàng dưới */
+      justify-content: space-between;
       background: white;
       overflow: hidden;
-      border: 0.3mm solid #ccc;       /* Viền xem trước (khi in sẽ ẩn) */
+      border: 0.3mm solid #ccc;
     }
-
     .label.empty {
       background: transparent;
       border: none;
     }
-
     @media print {
       body { background: white; margin: 0; padding: 0; }
       .no-print { display: none !important; }
       .label { border: none !important; }
       .row { page-break-inside: avoid; }
     }
-
-    /* ====================== TIÊU ĐỀ ====================== */
     .top-text {
-      font-size: 4pt;                 /* Cỡ chữ tiêu đề */
+      font-size: 4pt;
       font-weight: bold;
       text-align: right;
       white-space: nowrap;
@@ -67,22 +58,17 @@
       line-height: 1.2;
       margin-bottom: 0mm;
     }
-
-    /* ====================== VÙNG QR + BARCODE ====================== */
     .middle {
       display: flex;
       align-items: center;
-      gap: 1.2mm;                     /* Khoảng cách giữa QR và mã vạch */
+      gap: 1.2mm;
       flex: 1;
       min-height: 0;
-      /* ĐÃ CHỈNH: Thu bớt biên độ âm lại một chút để cân bằng không gian cho 2 dòng chữ bên dưới */
-      margin-top: -5mm; 
+      margin-top: -4.5mm;
     }
-
-    /* ---------- QR ---------- */
     .qrcode {
-      width: 10.5mm;                  /* Chiều rộng QR */
-      height: 10.5mm;                 /* Chiều cao QR */
+      width: 10.5mm;
+      height: 10.5mm;
       flex-shrink: 0;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
@@ -94,8 +80,6 @@
       image-rendering: pixelated !important;
       image-rendering: crisp-edges !important;
     }
-
-    /* ---------- BARCODE ---------- */
     .barcode-area {
       flex: 1;
       display: flex;
@@ -105,40 +89,33 @@
       min-width: 0;
       height: 75%;
     }
-
     .barcode {
       width: 75%;
-      max-height: 7mm;                /* Chiều cao tối đa của vạch barcode */
+      max-height: 7mm;
     }
-
     .barcode-number {
-      font-size: 5.5pt;               /* Cỡ chữ số dưới barcode */
+      font-size: 5.5pt;
       font-weight: 600;
-      margin-top: 0.2mm;              /* Khoảng cách giữa vạch barcode và dãy số */
+      margin-top: 0.2mm;
       letter-spacing: 0.2px;
       white-space: nowrap;
     }
-
-    /* ====================== TÊN HÀNG ====================== */
+    /* ===== TÊN HÀNG - HỖ TRỢ 2 DÒNG ===== */
     .bottom-text {
       font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
       font-weight: 700;
       text-align: center;
-      line-height: 1.0;
-      font-size: 8.5pt;               
-      padding-top: 0mm;
-      
-      /* ĐÃ CHỈNH: Cho phép ngắt dòng, giới hạn hiển thị tối đa 2 dòng */
+      overflow: hidden;
+      line-height: 1.1;
+      font-size: 8.5pt;
+      padding-top: 0.3mm;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
-      white-space: normal;            
-      overflow: hidden;
-      text-overflow: ellipsis;
-      word-break: break-word;         /* Tự ngắt dòng khi hết từ */
+      white-space: normal;
+      word-break: break-word;
+      max-height: 6.8mm;
     }
-
-    /* ====================== NÚT ====================== */
     .button-container {
       display: flex;
       gap: 10px;
@@ -160,24 +137,19 @@
 </head>
 <body>
   <div id="printArea"></div>
-
   <div class="button-container no-print">
     <button id="sharePdfBtn">Chia sẻ PDF</button>
     <button id="printBtn" onclick="window.print()">In trình duyệt</button>
   </div>
-
-  <script src="https://jsdelivr.net"></script>
-  <script src="https://cloudflare.com"></script>
-  <script src="https://cloudflare.com"></script>
-  <script src="https://cloudflare.com"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
-
       const bottomUpper = (bottom || '').toUpperCase();
-
       div.innerHTML = `
         <div class="top-text">${top}</div>
         <div class="middle">
@@ -192,15 +164,20 @@
       return div;
     }
 
-    /* ĐÃ CHỈNH: Cập nhật hàm tự co chữ tương thích với hiển thị khối 2 dòng */
-    function fitText(el, maxFontPt = 8.5, minFontPt = 6.0) {
+    // Tự động giảm cỡ chữ (hỗ trợ tối đa 2 dòng)
+    function fitText(el, maxFontPt = 8.8, minFontPt = 5.5) {
       if (!el) return;
+
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
+      el.style.whiteSpace = 'normal';
+      el.style.display = '-webkit-box';
+      el.style.webkitLineClamp = '2';
+      el.style.webkitBoxOrient = 'vertical';
+      el.style.overflow = 'hidden';
 
-      // Hạ cỡ chữ dần nếu chiều cao nội dung thực tế lớn hơn không gian hiển thị của thẻ
-      while (fontSize > minFontPt && el.scrollHeight > el.clientHeight) {
-        fontSize -= 0.3;
+      while (fontSize > minFontPt && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
+        fontSize -= 0.25;
         el.style.fontSize = fontSize + 'pt';
       }
     }
@@ -208,20 +185,16 @@
     function veTem() {
       const params = new URLSearchParams(window.location.search);
       const top = params.get('top') || 'PHU TUNG THIENTHAOCHBL';
-
       const barcode1 = params.get('barcode') || '0000000000000';
       const qr1 = params.get('qr') || barcode1;
       const bottom1 = params.get('bottom') || '---';
       const qty1 = parseInt(params.get('qty1') || '1');
-
       const barcode2 = params.get('barcode2');
       const qr2 = params.get('qr2') || barcode2;
       const bottom2 = params.get('bottom2') || '---';
       const qty2 = parseInt(params.get('qty2') || '0');
-
       const printArea = document.getElementById('printArea');
       printArea.innerHTML = '';
-
       let labels = [];
       for (let i = 0; i < qty1; i++) {
         labels.push({ top, barcode: barcode1, qr: qr1, bottom: bottom1 });
@@ -231,14 +204,11 @@
           labels.push({ top, barcode: barcode2, qr: qr2, bottom: bottom2 });
         }
       }
-
       for (let i = 0; i < labels.length; i += 2) {
         const row = document.createElement('div');
         row.className = 'row';
-
         const left = createLabel(labels[i].top, labels[i].barcode, labels[i].qr, labels[i].bottom, i);
         row.appendChild(left);
-
         if (i + 1 < labels.length) {
           const right = createLabel(labels[i+1].top, labels[i+1].barcode, labels[i+1].qr, labels[i+1].bottom, i+1);
           row.appendChild(right);
@@ -249,41 +219,32 @@
         }
         printArea.appendChild(row);
       }
-
       setTimeout(() => {
         labels.forEach((l, idx) => {
-          // ===== BARCODE =====
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.9,               
-            height: 26,               
+            width: 0.9,
+            height: 26,
             displayValue: false,
             margin: 0
           });
-
-          // ===== QR =====
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 200,               
+            width: 200,
             height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
           });
-
-          // Áp dụng co chữ tự động thích ứng với cấu trúc mới
-          fitText(document.getElementById(`bottom_${idx}`), 8.5, 6.0);
+          fitText(document.getElementById(`bottom_${idx}`), 8.8, 5.5);
         });
       }, 100);
-
       const style = document.createElement('style');
       style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
       document.head.appendChild(style);
     }
-
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
-    // ====================== TẠO PDF ======================
     async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
@@ -291,30 +252,40 @@
           alert('Không có tem để in');
           return;
         }
-
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
-          format: [70, 22]            
+          format: [70, 22]
         });
-
         for (let i = 0; i < rows.length; i++) {
           if (i > 0) pdf.addPage([70, 22], 'landscape');
-
           const canvas = await html2canvas(rows[i], {
-            scale: 8,                 
+            scale: 8,
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
             allowTaint: true
           });
-
           const ctx = canvas.getContext('2d');
           ctx.imageSmoothingEnabled = false;
-
           const imgData = canvas.toDataURL('image/png', 1.0);
           pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'NONE');
         }
-
         const fileName = `tem_${Date.now()}.pdf`;
+        const pdfBlob = pdf.output('blob');
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Tem PDF' });
+        } else {
+          pdf.save(fileName);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Không thể tạo PDF: ' + e.message);
+      }
+    }
+    document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
+  </script>
+</body>
+</html>
