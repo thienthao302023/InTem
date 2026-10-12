@@ -34,16 +34,7 @@
     .label {
       width: 35mm;                    /* Chiều rộng 1 tem */
       height: 22mm;                   /* Chiều cao 1 tem */
-
-      /* 
-        padding: trên | phải | dưới | trái
-        - trên  : khoảng cách từ mép trên tem → tiêu đề
-        - phải  : khoảng cách từ nội dung → mép phải tem
-        - dưới  : khoảng cách từ tên hàng → mép dưới tem
-        - trái  : khoảng cách từ nội dung → mép trái tem
-      */
-      padding: 0.5mm 2.4mm 1mm 0mm;
-
+      padding: 0.5mm 2.4mm 0.8mm 0mm; /* GIỮ NGUYÊN vị trí tiêu đề ở trên */
       display: flex;
       flex-direction: column;
       justify-content: space-between; /* Tiêu đề trên - QR giữa - Tên hàng dưới */
@@ -68,14 +59,12 @@
     .top-text {
       font-size: 4pt;                 /* Cỡ chữ tiêu đề */
       font-weight: bold;
-      text-align: center;
+      text-align: right;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       letter-spacing: -0.2px;
       line-height: 1.2;
-
-      /* Khoảng cách từ tiêu đề xuống QR/barcode */
       margin-bottom: 0mm;
     }
 
@@ -86,6 +75,8 @@
       gap: 1.2mm;                     /* Khoảng cách giữa QR và mã vạch */
       flex: 1;
       min-height: 0;
+      /* ĐÃ CHỈNH: Thu bớt biên độ âm lại một chút để cân bằng không gian cho 2 dòng chữ bên dưới */
+      margin-top: -1.2mm; 
     }
 
     /* ---------- QR ---------- */
@@ -116,7 +107,7 @@
     }
 
     .barcode {
-      width: 100%;
+      width: 75%;
       max-height: 7mm;                /* Chiều cao tối đa của vạch barcode */
     }
 
@@ -133,13 +124,18 @@
       font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
       font-weight: 700;
       text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      line-height: 1.05;
-      font-size: 8.5pt;               /* Cỡ chữ tên hàng (sẽ tự co nếu dài) */
-
-      /* Khoảng cách từ QR/barcode xuống tên hàng */
+      line-height: 1.0;
+      font-size: 8.5pt;               
       padding-top: 0mm;
+      
+      /* ĐÃ CHỈNH: Cho phép ngắt dòng, giới hạn hiển thị tối đa 2 dòng */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      white-space: normal;            
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;         /* Tự ngắt dòng khi hết từ */
     }
 
     /* ====================== NÚT ====================== */
@@ -170,14 +166,12 @@
     <button id="printBtn" onclick="window.print()">In trình duyệt</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://jsdelivr.net"></script>
+  <script src="https://cloudflare.com"></script>
+  <script src="https://cloudflare.com"></script>
+  <script src="https://cloudflare.com"></script>
 
   <script>
-    // Không còn OFFSET_X nữa (không lệch trái/phải)
-
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
@@ -198,14 +192,14 @@
       return div;
     }
 
-    // Tự động giảm cỡ chữ tên hàng nếu bị dài
-    function fitText(el, maxFontPt = 9.0, minFontPt = 5.8) {
+    /* ĐÃ CHỈNH: Cập nhật hàm tự co chữ tương thích với hiển thị khối 2 dòng */
+    function fitText(el, maxFontPt = 8.5, minFontPt = 6.0) {
       if (!el) return;
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
-      el.style.whiteSpace = 'nowrap';
 
-      while (fontSize > minFontPt && el.scrollWidth > el.clientWidth) {
+      // Hạ cỡ chữ dần nếu chiều cao nội dung thực tế lớn hơn không gian hiển thị của thẻ
+      while (fontSize > minFontPt && el.scrollHeight > el.clientHeight) {
         fontSize -= 0.3;
         el.style.fontSize = fontSize + 'pt';
       }
@@ -261,8 +255,8 @@
           // ===== BARCODE =====
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.9,               // Độ dày mỗi vạch (càng lớn càng đậm)
-            height: 26,               // Chiều cao vạch barcode (pixel)
+            width: 0.9,               
+            height: 26,               
             displayValue: false,
             margin: 0
           });
@@ -270,19 +264,18 @@
           // ===== QR =====
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
-            width: 200,               // Độ phân giải QR (càng cao càng nét, nên ≥ 180)
+            width: 200,               
             height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
           });
 
-          // Tự co chữ tên hàng
-          fitText(document.getElementById(`bottom_${idx}`), 9.0, 5.8);
+          // Áp dụng co chữ tự động thích ứng với cấu trúc mới
+          fitText(document.getElementById(`bottom_${idx}`), 8.5, 6.0);
         });
       }, 100);
 
-      // Đặt khổ giấy khi in
       const style = document.createElement('style');
       style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
       document.head.appendChild(style);
@@ -303,14 +296,14 @@
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
-          format: [70, 22]            // Khổ giấy: rộng 70mm × cao 22mm
+          format: [70, 22]            
         });
 
         for (let i = 0; i < rows.length; i++) {
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
           const canvas = await html2canvas(rows[i], {
-            scale: 8,                 // Độ nét PDF (6~10). Cao hơn = nét hơn nhưng file nặng hơn
+            scale: 8,                 
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
@@ -325,21 +318,3 @@
         }
 
         const fileName = `tem_${Date.now()}.pdf`;
-        const pdfBlob = pdf.output('blob');
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Tem PDF' });
-        } else {
-          pdf.save(fileName);
-        }
-      } catch (e) {
-        console.error(e);
-        alert('Không thể tạo PDF: ' + e.message);
-      }
-    }
-
-    document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
-  </script>
-</body>
-</html>
