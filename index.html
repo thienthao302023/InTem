@@ -132,14 +132,14 @@
       font-weight: 600;
     }
     #sharePdfBtn { background: #e91e63; }
-    #printBtn    { background: #2563eb; }
+    #saveImageBtn { background: #16a34a; }
   </style>
 </head>
 <body>
   <div id="printArea"></div>
   <div class="button-container no-print">
     <button id="sharePdfBtn">Chia sẻ PDF</button>
-    <button id="printBtn" onclick="window.print()">In trình duyệt</button>
+    <button id="saveImageBtn">Lưu ảnh</button>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -163,11 +163,9 @@
       `;
       return div;
     }
-
     // Tự động giảm cỡ chữ (hỗ trợ tối đa 2 dòng)
     function fitText(el, maxFontPt = 8.8, minFontPt = 5.5) {
       if (!el) return;
-
       let fontSize = maxFontPt;
       el.style.fontSize = fontSize + 'pt';
       el.style.whiteSpace = 'normal';
@@ -175,13 +173,11 @@
       el.style.webkitLineClamp = '2';
       el.style.webkitBoxOrient = 'vertical';
       el.style.overflow = 'hidden';
-
       while (fontSize > minFontPt && (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth)) {
         fontSize -= 0.25;
         el.style.fontSize = fontSize + 'pt';
       }
     }
-
     function veTem() {
       const params = new URLSearchParams(window.location.search);
       const top = params.get('top') || 'PHU TUNG THIENTHAOCHBL';
@@ -244,7 +240,6 @@
       document.head.appendChild(style);
     }
     window.addEventListener('load', () => setTimeout(veTem, 120));
-
     async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
@@ -285,7 +280,34 @@
         alert('Không thể tạo PDF: ' + e.message);
       }
     }
+    async function saveImage() {
+      try {
+        const printArea = document.getElementById('printArea');
+        if (!printArea.children.length) {
+          alert('Không có tem để lưu');
+          return;
+        }
+        const canvas = await html2canvas(printArea, {
+          scale: 8,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          logging: false,
+          allowTaint: true
+        });
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = `tem_${Date.now()}.png`;
+        link.href = imgData;
+        link.click();
+      } catch (e) {
+        console.error(e);
+        alert('Không thể lưu ảnh: ' + e.message);
+      }
+    }
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
+    document.getElementById("saveImageBtn").addEventListener("click", saveImage);
   </script>
 </body>
 </html>
