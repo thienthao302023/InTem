@@ -132,14 +132,14 @@
       font-weight: 600;
     }
     #sharePdfBtn { background: #e91e63; }
-    #saveImageBtn { background: #16a34a; }
+    #shareImageBtn { background: #16a34a; }
   </style>
 </head>
 <body>
   <div id="printArea"></div>
   <div class="button-container no-print">
     <button id="sharePdfBtn">Chia sẻ PDF</button>
-    <button id="saveImageBtn">Lưu ảnh</button>
+    <button id="shareImageBtn">Chia sẻ ảnh</button>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -240,6 +240,7 @@
       document.head.appendChild(style);
     }
     window.addEventListener('load', () => setTimeout(veTem, 120));
+
     async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
@@ -280,34 +281,56 @@
         alert('Không thể tạo PDF: ' + e.message);
       }
     }
-    async function saveImage() {
+
+    // Chia sẻ ảnh từng hàng (70x22mm) giống cách chia sẻ PDF → tiện in TSPL
+    async function shareImage() {
       try {
-        const printArea = document.getElementById('printArea');
-        if (!printArea.children.length) {
-          alert('Không có tem để lưu');
+        const rows = document.querySelectorAll('#printArea .row');
+        if (rows.length === 0) {
+          alert('Không có tem để chia sẻ');
           return;
         }
-        const canvas = await html2canvas(printArea, {
-          scale: 8,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false,
-          allowTaint: true
-        });
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        const imgData = canvas.toDataURL('image/png', 1.0);
-        const link = document.createElement('a');
-        link.download = `tem_${Date.now()}.png`;
-        link.href = imgData;
-        link.click();
+        const files = [];
+        for (let i = 0; i < rows.length; i++) {
+          const canvas = await html2canvas(rows[i], {
+            scale: 8,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false,
+            allowTaint: true
+          });
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+          const fileName = `tem_${Date.now()}_${i + 1}.png`;
+          files.push(new File([blob], fileName, { type: 'image/png' }));
+        }
+
+        if (navigator.canShare && navigator.canShare({ files })) {
+          await navigator.share({
+            files: files,
+            title: 'Tem nhãn'
+          });
+        } else {
+          // Fallback: tải từng ảnh về
+          files.forEach((file, idx) => {
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+        }
       } catch (e) {
         console.error(e);
-        alert('Không thể lưu ảnh: ' + e.message);
+        alert('Không thể chia sẻ ảnh: ' + e.message);
       }
     }
+
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
-    document.getElementById("saveImageBtn").addEventListener("click", saveImage);
+    document.getElementById("shareImageBtn").addEventListener("click", shareImage);
   </script>
 </body>
 </html>
