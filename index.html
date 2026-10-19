@@ -131,19 +131,20 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
-      background: #16a34a;
+      background: #e91e63;
     }
   </style>
 </head>
 <body>
   <div id="printArea"></div>
   <div class="button-container no-print">
-    <button id="shareImageBtn">Chia sẻ ảnh PNG</button>
+    <button id="sharePdfBtn">Chia sẻ PDF</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     function createLabel(top, barcode, qr, bottom, id) {
@@ -252,8 +253,8 @@
         labels.forEach((l, idx) => {
           JsBarcode('#bc_' + idx, l.barcode, {
             format: "CODE128",
-            width: 1.5,               // thanh dày hơn một chút
-            height: 34,
+            width: 1.45,
+            height: 32,
             displayValue: false,
             margin: 0,
             background: "#ffffff",
@@ -262,8 +263,8 @@
 
           new QRCode(document.getElementById('qr_' + idx), {
             text: l.qr,
-            width: 220,
-            height: 220,
+            width: 200,
+            height: 200,
             colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
@@ -272,62 +273,68 @@
           fitText(document.getElementById('bottom_' + idx), 8.8, 5.5);
         });
       }, 120);
+
+      const style = document.createElement('style');
+      style.textContent = '@page { size: 70mm 22mm; margin: 0; }';
+      document.head.appendChild(style);
     }
 
     window.addEventListener('load', () => setTimeout(veTem, 150));
 
-    async function shareImage() {
+    async function sharePdf() {
       try {
         const rows = document.querySelectorAll('#printArea .row');
         if (rows.length === 0) {
-          alert('Không có tem để chia sẻ');
+          alert('Không có tem để in');
           return;
         }
 
-        const files = [];
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: [70, 22],
+          compress: false
+        });
 
         for (let i = 0; i < rows.length; i++) {
+          if (i > 0) pdf.addPage([70, 22], 'landscape');
+
           const canvas = await html2canvas(rows[i], {
-            scale: 16,                    // độ phân giải rất cao
+            scale: 16,
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
             allowTaint: true,
-            imageTimeout: 0
+            imageTimeout: 0,
+            width: rows[i].offsetWidth,
+            height: rows[i].offsetHeight
           });
 
           const ctx = canvas.getContext('2d');
           ctx.imageSmoothingEnabled = false;
           ctx.imageSmoothingQuality = 'low';
 
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-          const fileName = `tem_\( {Date.now()}_ \){i + 1}.png`;
-          files.push(new File([blob], fileName, { type: 'image/png' }));
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'NONE');
         }
 
-        if (navigator.canShare && navigator.canShare({ files })) {
-          await navigator.share({
-            files: files,
-            title: 'Tem nhãn'
-          });
+        const fileName = 'tem_' + Date.now() + '.pdf';
+        const pdfBlob = pdf.output('blob');
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Tem PDF' });
         } else {
-          // Fallback: tải từng ảnh về
-          files.forEach((file) => {
-            const url = URL.createObjectURL(file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            a.click();
-            URL.revokeObjectURL(url);
-          });
+          pdf.save(fileName);
         }
       } catch (e) {
         console.error(e);
-        alert('Không thể chia sẻ ảnh: ' + e.message);
+        alert('Không thể tạo PDF: ' + e.message);
       }
     }
 
-    document.getElementById("shareImageBtn").addEventListener("click", shareImage);
+    document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
   </script>
 </body>
 </html>
