@@ -154,6 +154,7 @@
       const div = document.createElement('div');
       div.className = 'label';
       const bottomUpper = (bottom || '').toUpperCase();
+
       div.innerHTML = `
         <div class="top-text">${top}</div>
         <div class="middle">
@@ -228,7 +229,7 @@
         labels.forEach((l, idx) => {
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 1.45,          // thanh dày hơn → dễ quét
+            width: 1.45,
             height: 32,
             displayValue: false,
             margin: 0,
@@ -273,7 +274,7 @@
           if (i > 0) pdf.addPage([70, 22], 'landscape');
 
           const canvas = await html2canvas(rows[i], {
-            scale: 14,                    // độ phân giải rất cao
+            scale: 14,
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
