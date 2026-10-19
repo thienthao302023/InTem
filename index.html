@@ -56,7 +56,6 @@
       text-overflow: ellipsis;
       letter-spacing: -0.2px;
       line-height: 1.2;
-      margin-bottom: 0mm;
     }
     .middle {
       display: flex;
@@ -122,8 +121,6 @@
     }
     .button-container {
       display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
       justify-content: center;
     }
     button {
@@ -153,19 +150,45 @@
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
       div.className = 'label';
-      const bottomUpper = (bottom || '').toUpperCase();
 
-      div.innerHTML = `
-        <div class="top-text">${top}</div>
-        <div class="middle">
-          <div class="qrcode" id="qr_${id}"></div>
-          <div class="barcode-area">
-            <svg class="barcode" id="bc_${id}"></svg>
-            <div class="barcode-number">${barcode}</div>
-          </div>
-        </div>
-        <div class="bottom-text" id="bottom_\( {id}"> \){bottomUpper}</div>
-      `;
+      // Tạo từng phần tử bằng DOM để tránh lỗi template literal
+      const topDiv = document.createElement('div');
+      topDiv.className = 'top-text';
+      topDiv.textContent = top || '';
+
+      const middle = document.createElement('div');
+      middle.className = 'middle';
+
+      const qrDiv = document.createElement('div');
+      qrDiv.className = 'qrcode';
+      qrDiv.id = 'qr_' + id;
+
+      const barcodeArea = document.createElement('div');
+      barcodeArea.className = 'barcode-area';
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.classList.add('barcode');
+      svg.id = 'bc_' + id;
+
+      const barcodeNumber = document.createElement('div');
+      barcodeNumber.className = 'barcode-number';
+      barcodeNumber.textContent = barcode || '';
+
+      barcodeArea.appendChild(svg);
+      barcodeArea.appendChild(barcodeNumber);
+
+      middle.appendChild(qrDiv);
+      middle.appendChild(barcodeArea);
+
+      const bottomDiv = document.createElement('div');
+      bottomDiv.className = 'bottom-text';
+      bottomDiv.id = 'bottom_' + id;
+      bottomDiv.textContent = (bottom || '').toUpperCase();
+
+      div.appendChild(topDiv);
+      div.appendChild(middle);
+      div.appendChild(bottomDiv);
+
       return div;
     }
 
@@ -212,8 +235,10 @@
       for (let i = 0; i < labels.length; i += 2) {
         const row = document.createElement('div');
         row.className = 'row';
+
         const left = createLabel(labels[i].top, labels[i].barcode, labels[i].qr, labels[i].bottom, i);
         row.appendChild(left);
+
         if (i + 1 < labels.length) {
           const right = createLabel(labels[i+1].top, labels[i+1].barcode, labels[i+1].qr, labels[i+1].bottom, i+1);
           row.appendChild(right);
@@ -227,7 +252,7 @@
 
       setTimeout(() => {
         labels.forEach((l, idx) => {
-          JsBarcode(`#bc_${idx}`, l.barcode, {
+          JsBarcode('#bc_' + idx, l.barcode, {
             format: "CODE128",
             width: 1.45,
             height: 32,
@@ -236,7 +261,8 @@
             background: "#ffffff",
             lineColor: "#000000"
           });
-          new QRCode(document.getElementById(`qr_${idx}`), {
+
+          new QRCode(document.getElementById('qr_' + idx), {
             text: l.qr,
             width: 200,
             height: 200,
@@ -244,16 +270,17 @@
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
           });
-          fitText(document.getElementById(`bottom_${idx}`), 8.8, 5.5);
+
+          fitText(document.getElementById('bottom_' + idx), 8.8, 5.5);
         });
-      }, 100);
+      }, 120);
 
       const style = document.createElement('style');
-      style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
+      style.textContent = '@page { size: 70mm 22mm; margin: 0; }';
       document.head.appendChild(style);
     }
 
-    window.addEventListener('load', () => setTimeout(veTem, 120));
+    window.addEventListener('load', () => setTimeout(veTem, 150));
 
     async function sharePdf() {
       try {
@@ -290,7 +317,7 @@
           pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'NONE');
         }
 
-        const fileName = `tem_${Date.now()}.pdf`;
+        const fileName = 'tem_' + Date.now() + '.pdf';
         const pdfBlob = pdf.output('blob');
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
