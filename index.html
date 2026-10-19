@@ -90,8 +90,13 @@
       height: 100%;
     }
     .barcode {
-      width: 90%;
-      max-height: 7mm;
+      width: 92%;
+      max-height: 8mm;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .barcode svg {
+      shape-rendering: crispEdges;
     }
     .barcode-number {
       font-size: 5.5pt;
@@ -100,7 +105,6 @@
       letter-spacing: 0.2px;
       white-space: nowrap;
     }
-    /* ===== TÊN HÀNG - HỖ TRỢ 2 DÒNG ===== */
     .bottom-text {
       font-family: "Bahnschrift Condensed", "Bahnschrift", "Arial Narrow", Arial, sans-serif;
       font-weight: 700;
@@ -130,21 +134,21 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
+      background: #e91e63;
     }
-    #sharePdfBtn { background: #e91e63; }
-    #shareImageBtn { background: #16a34a; }
   </style>
 </head>
 <body>
   <div id="printArea"></div>
   <div class="button-container no-print">
     <button id="sharePdfBtn">Chia sẻ PDF</button>
-    <button id="shareImageBtn">Chia sẻ ảnh</button>
   </div>
+
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <script>
     function createLabel(top, barcode, qr, bottom, id) {
       const div = document.createElement('div');
@@ -159,11 +163,11 @@
             <div class="barcode-number">${barcode}</div>
           </div>
         </div>
-        <div class="bottom-text" id="bottom_${id}">${bottomUpper}</div>
+        <div class="bottom-text" id="bottom_\( {id}"> \){bottomUpper}</div>
       `;
       return div;
     }
-    // Tự động giảm cỡ chữ (hỗ trợ tối đa 2 dòng)
+
     function fitText(el, maxFontPt = 8.8, minFontPt = 5.5) {
       if (!el) return;
       let fontSize = maxFontPt;
@@ -178,6 +182,7 @@
         el.style.fontSize = fontSize + 'pt';
       }
     }
+
     function veTem() {
       const params = new URLSearchParams(window.location.search);
       const top = params.get('top') || 'PHU TUNG THIENTHAOCHBL';
@@ -189,8 +194,10 @@
       const qr2 = params.get('qr2') || barcode2;
       const bottom2 = params.get('bottom2') || '---';
       const qty2 = parseInt(params.get('qty2') || '0');
+
       const printArea = document.getElementById('printArea');
       printArea.innerHTML = '';
+
       let labels = [];
       for (let i = 0; i < qty1; i++) {
         labels.push({ top, barcode: barcode1, qr: qr1, bottom: bottom1 });
@@ -200,6 +207,7 @@
           labels.push({ top, barcode: barcode2, qr: qr2, bottom: bottom2 });
         }
       }
+
       for (let i = 0; i < labels.length; i += 2) {
         const row = document.createElement('div');
         row.className = 'row';
@@ -215,14 +223,17 @@
         }
         printArea.appendChild(row);
       }
+
       setTimeout(() => {
         labels.forEach((l, idx) => {
           JsBarcode(`#bc_${idx}`, l.barcode, {
             format: "CODE128",
-            width: 0.9,
-            height: 26,
+            width: 1.45,          // thanh dày hơn → dễ quét
+            height: 32,
             displayValue: false,
-            margin: 0
+            margin: 0,
+            background: "#ffffff",
+            lineColor: "#000000"
           });
           new QRCode(document.getElementById(`qr_${idx}`), {
             text: l.qr,
@@ -235,10 +246,12 @@
           fitText(document.getElementById(`bottom_${idx}`), 8.8, 5.5);
         });
       }, 100);
+
       const style = document.createElement('style');
       style.textContent = `@page { size: 70mm 22mm; margin: 0; }`;
       document.head.appendChild(style);
     }
+
     window.addEventListener('load', () => setTimeout(veTem, 120));
 
     async function sharePdf() {
@@ -248,29 +261,38 @@
           alert('Không có tem để in');
           return;
         }
+
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
           format: [70, 22]
         });
+
         for (let i = 0; i < rows.length; i++) {
           if (i > 0) pdf.addPage([70, 22], 'landscape');
+
           const canvas = await html2canvas(rows[i], {
-            scale: 8,
+            scale: 14,                    // độ phân giải rất cao
             backgroundColor: "#ffffff",
             useCORS: true,
             logging: false,
-            allowTaint: true
+            allowTaint: true,
+            imageTimeout: 0
           });
+
           const ctx = canvas.getContext('2d');
           ctx.imageSmoothingEnabled = false;
+          ctx.imageSmoothingQuality = 'low';
+
           const imgData = canvas.toDataURL('image/png', 1.0);
           pdf.addImage(imgData, 'PNG', 0, 0, 70, 22, undefined, 'NONE');
         }
+
         const fileName = `tem_${Date.now()}.pdf`;
         const pdfBlob = pdf.output('blob');
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], title: 'Tem PDF' });
         } else {
@@ -282,55 +304,7 @@
       }
     }
 
-    // Chia sẻ ảnh từng hàng (70x22mm) giống cách chia sẻ PDF → tiện in TSPL
-    async function shareImage() {
-      try {
-        const rows = document.querySelectorAll('#printArea .row');
-        if (rows.length === 0) {
-          alert('Không có tem để chia sẻ');
-          return;
-        }
-        const files = [];
-        for (let i = 0; i < rows.length; i++) {
-          const canvas = await html2canvas(rows[i], {
-            scale: 8,
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            logging: false,
-            allowTaint: true
-          });
-          const ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = false;
-
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-          const fileName = `tem_${Date.now()}_${i + 1}.png`;
-          files.push(new File([blob], fileName, { type: 'image/png' }));
-        }
-
-        if (navigator.canShare && navigator.canShare({ files })) {
-          await navigator.share({
-            files: files,
-            title: 'Tem nhãn'
-          });
-        } else {
-          // Fallback: tải từng ảnh về
-          files.forEach((file, idx) => {
-            const url = URL.createObjectURL(file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            a.click();
-            URL.revokeObjectURL(url);
-          });
-        }
-      } catch (e) {
-        console.error(e);
-        alert('Không thể chia sẻ ảnh: ' + e.message);
-      }
-    }
-
     document.getElementById("sharePdfBtn").addEventListener("click", sharePdf);
-    document.getElementById("shareImageBtn").addEventListener("click", shareImage);
   </script>
 </body>
 </html>
